@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "mot"
+version = "0.1.0"
+description = "Multiple Object Tracking"
+authors = ["Bertan Günyel <bertan.gunyel@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11.0"
+torch = { url = "https://download.pytorch.org/whl/cu121/torch-2.1.2%2Bcu121-cp311-cp311-linux_x86_64.whl"}
+torchaudio = { url = "https://download.pytorch.org/whl/cu121/torchaudio-2.1.2%2Bcu121-cp311-cp311-linux_x86_64.whl"}
+torchvision = { url = "https://download.pytorch.org/whl/cu121/torchvision-0.16.2%2Bcu121-cp311-cp311-linux_x86_64.whl"}
+opencv-python = "^4.9.0.80"
+pydantic = "^2.6.4"
+pydantic-settings = "^2.2.1"
+ultralytics = "^8.1.35"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
