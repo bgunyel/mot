@@ -1,7 +1,9 @@
 import os
 import time
+import datetime
 
 import torch
+import cv2 as cv
 
 from config import settings
 from utils import show_images, draw_bounding_boxes
@@ -27,9 +29,9 @@ if __name__ == "__main__":
     else:
         raise RuntimeError('No GPU found!')
 
+    print(f'{settings.APPLICATION_NAME} started at {datetime.datetime.now()}')
     time1 = time.time()
-    print(f'{settings.APPLICATION_NAME} started at {time1}')
     main()
     time2 = time.time()
-    print(f'{settings.APPLICATION_NAME} finished at {time2}')
+    print(f'{settings.APPLICATION_NAME} finished at {datetime.datetime.now()}')
     print(f'{settings.APPLICATION_NAME} took {time2 - time1} seconds')

@@ -5,7 +5,9 @@ import numpy as np
 from ultralytics import YOLO
 import cv2 as cv
 
-from metric import total_cost
+from metric import total_cost, box_iou
+from utils import id_to_color, draw_bounding_boxes
+from config import settings
 
 
 class Obstacle:
@@ -73,18 +75,54 @@ def associate(old_boxes, new_boxes):
 
 
 def simple_online_realtime_tracking(image_names: list[str], image_folder: str):
-    model = YOLO('yolov8n.pt')
+    model = YOLO(model='yolov8n.pt', verbose=False)
 
-    for idx, image_name in enumerate(image_names):
+    stored_obstacles = []
+    obstacle_idx = 1
+
+    for image_idx, image_name in enumerate(image_names):
         image = cv.imread(os.path.join(image_folder, image_name))
-        results = model(image)
+        results = model(image, verbose=False)
         boxes = results[0].boxes
         names_dict = results[0].names
 
         b_boxes = [box.xyxy.cpu().reshape(4, ).numpy() for box in boxes]
         class_names = [names_dict[int(box.cls.cpu()[0])] for box in boxes]
 
-        if idx == 0:
-            continue
+        for i in range(len(b_boxes)):
+            for j in range(i+1, len(b_boxes)):
+                iou = box_iou(box1=b_boxes[i], box2=b_boxes[j])
+                print(f'IOU {i} {j}: {iou}')
+
+        ##
+        new_obstacles = []
+        old_obstacle_boxes = [obs.box for obs in stored_obstacles]  # Simply get the boxes
+        matches, unmatched_detections, unmatched_tracks = associate(old_obstacle_boxes, b_boxes)  # Associate the boxes
+
+        # Matching
+        for match in matches:
+            obstacle = Obstacle(idx=stored_obstacles[match[0]].idx,
+                                box=b_boxes[match[1]],
+                                age=stored_obstacles[match[0]].age+1)
+            new_obstacles.append(obstacle)
+            # print("Obstacle ", obs.idx, " with box: ", obs.box, "has been matched with obstacle ", stored_obstacles[match[0]].box, "and now has age: ", obs.age)
+
+        # New (Unmatched) Detections
+        for new_obs in unmatched_detections:
+            obstacle = Obstacle(idx=obstacle_idx, box=new_obs)
+            new_obstacles.append(obstacle)
+            obstacle_idx += 1
+            # print("Obstacle ", obs.idx, " has been detected for the first time: ", obs.box)
+
+        stored_obstacles = new_obstacles
+
+        out_image = draw_bounding_boxes(image=image,
+                                        boxes=[obstacle.box for obstacle in new_obstacles],
+                                        names=[f'{obstacle.idx} (Age: {obstacle.age})'
+                                               if obstacle.age > 50
+                                               else f'{obstacle.idx}'
+                                               for obstacle in new_obstacles],
+                                        colors=[id_to_color(idx=obstacle.idx * 10) for obstacle in new_obstacles])
+        cv.imwrite(filename=os.path.join(settings.OUT_FOLDER, image_name), img=out_image)
 
         dummy = -32

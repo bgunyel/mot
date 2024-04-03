@@ -20,24 +20,38 @@ def show_images(image_folder: str) -> None:
     cv.destroyAllWindows()
 
 
-def draw_bounding_boxes(image: np.ndarray, boxes: list[np.ndarray], class_names: list[str]):
+def id_to_color(idx):
+    """
+    Random function to convert an id to a color
+    """
+    blue = idx * 5 % 256
+    green = idx * 12 % 256
+    red = idx * 23 % 256
+    return red, green, blue
+
+
+def draw_bounding_boxes(
+        image: np.ndarray,
+        boxes: list[np.ndarray],
+        names: list[str],
+        colors: list[tuple[int, int, int]]
+) -> np.ndarray:
 
     for idx, box in enumerate(boxes):
-        color = (0, 0, 255)
         cv.rectangle(
             img=image,
             pt1=(int(box[0]), int(box[1])),
             pt2=(int(box[2]), int(box[3])),
-            color=color,
+            color=colors[idx],
             thickness=2
         )
         cv.putText(
             img=image,
-            text=class_names[idx],
+            text=names[idx],
             org=(int(box[0]), int(box[1])),
             fontFace=cv.FONT_HERSHEY_SIMPLEX,
             fontScale=1.0,
-            color=color,
+            color=colors[idx],
             thickness=2
         )
 
