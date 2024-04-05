@@ -1,13 +1,13 @@
 import os
 
-from scipy.optimize import linear_sum_assignment
-import numpy as np
-from ultralytics import YOLO
 import cv2 as cv
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+from ultralytics import YOLO
 
-from metric import total_similarity, box_iou
+from config import settings, params
+from metric import total_similarity
 from utils import id_to_color, draw_bounding_boxes, convert_box_xywh_to_xyxy
-from config import settings
 
 
 class Obstacle:
@@ -18,7 +18,7 @@ class Obstacle:
         self.unmatched_age = unmatched_age
 
 
-def associate(old_boxes, new_boxes):
+def associate(old_boxes: list[np.ndarray], new_boxes: list[np.ndarray], image_width: int, image_height: int):
     """
     old_boxes will represent the former bounding boxes (at time 0)
     new_boxes will represent the new bounding boxes (at time 1)
@@ -38,7 +38,10 @@ def associate(old_boxes, new_boxes):
     # You can also use the more challenging cost but still use IOU as a reference for convenience (use as a filter only)
     for i, old_box in enumerate(old_boxes):
         for j, new_box in enumerate(new_boxes):
-            iou_matrix[i][j] = total_similarity(old_box, new_box)
+            iou_matrix[i][j] = total_similarity(old_box=old_box,
+                                                new_box=new_box,
+                                                image_width=image_width,
+                                                image_height=image_height)
 
     # Call for the Hungarian Algorithm
     hungarian_row, hungarian_col = linear_sum_assignment(-iou_matrix)
@@ -75,13 +78,14 @@ def associate(old_boxes, new_boxes):
 
 
 def simple_online_realtime_tracking(image_names: list[str], image_folder: str):
-    model = YOLO(model='yolov8n.pt', verbose=False)
+    model = YOLO(model=params.YOLO_MODEL, verbose=False)
 
     stored_obstacles = []
     obstacle_idx = 1
 
     for image_idx, image_name in enumerate(image_names):
         image = cv.imread(os.path.join(image_folder, image_name))
+        image_height, image_width = image.shape[:2]
         results = model(image, verbose=False)
         boxes = results[0].boxes
         names_dict = results[0].names
@@ -91,8 +95,11 @@ def simple_online_realtime_tracking(image_names: list[str], image_folder: str):
 
         ##
         new_obstacles = []
-        old_obstacle_boxes = [obs.box for obs in stored_obstacles]  # Simply get the boxes
-        matches, unmatched_detections, unmatched_tracks = associate(old_obstacle_boxes, b_boxes)  # Associate the boxes
+        old_obstacle_boxes = [obs.box for obs in stored_obstacles]
+        matches, unmatched_detections, unmatched_tracks = associate(old_boxes=old_obstacle_boxes,
+                                                                    new_boxes=b_boxes,
+                                                                    image_width=image_width,
+                                                                    image_height=image_height)
 
         # Matching
         for match in matches:
@@ -100,14 +107,12 @@ def simple_online_realtime_tracking(image_names: list[str], image_folder: str):
                                 box=b_boxes[match[1]],
                                 age=stored_obstacles[match[0]].age+1)
             new_obstacles.append(obstacle)
-            # print("Obstacle ", obs.idx, " with box: ", obs.box, "has been matched with obstacle ", stored_obstacles[match[0]].box, "and now has age: ", obs.age)
 
         # New (Unmatched) Detections
         for new_obs in unmatched_detections:
             obstacle = Obstacle(idx=obstacle_idx, box=new_obs)
             new_obstacles.append(obstacle)
             obstacle_idx += 1
-            # print("Obstacle ", obs.idx, " has been detected for the first time: ", obs.box)
 
         stored_obstacles = new_obstacles
 

@@ -16,4 +16,9 @@ class Settings(BaseSettings):
         env_file = os.path.join(ROOT_DIR, '.env')
 
 
+class Params(BaseSettings):
+    YOLO_MODEL: str = 'yolov8n.pt'
+
+
 settings = Settings()
+params = Params()

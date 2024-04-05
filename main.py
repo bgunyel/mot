@@ -6,7 +6,6 @@ import torch
 import cv2 as cv
 
 from config import settings
-from utils import show_images, draw_bounding_boxes
 from tracking import simple_online_realtime_tracking
 
 
@@ -17,7 +16,6 @@ def main():
         [f for f in os.listdir(settings.IMAGE_FOLDER) if os.path.isfile(os.path.join(settings.IMAGE_FOLDER, f))])
 
     simple_online_realtime_tracking(image_names=image_names, image_folder=settings.IMAGE_FOLDER)
-    dummy = -32
 
 
 if __name__ == "__main__":
