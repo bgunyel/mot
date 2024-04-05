@@ -36,7 +36,6 @@ def draw_bounding_boxes(
         names: list[str],
         colors: list[tuple[int, int, int]]
 ) -> np.ndarray:
-
     for idx, box in enumerate(boxes):
         cv.rectangle(
             img=image,
@@ -56,3 +55,14 @@ def draw_bounding_boxes(
         )
 
     return image
+
+
+def convert_box_xywh_to_xyxy(box: np.ndarray) -> np.ndarray:
+    """
+    Convert box from (x,y, w, h) to (x1,y1,x2,y2)
+    """
+    x1 = box[0] - box[2] / 2
+    x2 = box[0] + box[2] / 2
+    y1 = box[1] - box[3] / 2
+    y2 = box[1] + box[3] / 2
+    return np.array([x1, y1, x2, y2])

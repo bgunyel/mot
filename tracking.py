@@ -5,8 +5,8 @@ import numpy as np
 from ultralytics import YOLO
 import cv2 as cv
 
-from metric import total_cost, box_iou
-from utils import id_to_color, draw_bounding_boxes
+from metric import total_similarity, box_iou
+from utils import id_to_color, draw_bounding_boxes, convert_box_xywh_to_xyxy
 from config import settings
 
 
@@ -38,7 +38,7 @@ def associate(old_boxes, new_boxes):
     # You can also use the more challenging cost but still use IOU as a reference for convenience (use as a filter only)
     for i, old_box in enumerate(old_boxes):
         for j, new_box in enumerate(new_boxes):
-            iou_matrix[i][j] = total_cost(old_box, new_box)
+            iou_matrix[i][j] = total_similarity(old_box, new_box)
 
     # Call for the Hungarian Algorithm
     hungarian_row, hungarian_col = linear_sum_assignment(-iou_matrix)
@@ -86,13 +86,8 @@ def simple_online_realtime_tracking(image_names: list[str], image_folder: str):
         boxes = results[0].boxes
         names_dict = results[0].names
 
-        b_boxes = [box.xyxy.cpu().reshape(4, ).numpy() for box in boxes]
+        b_boxes = [box.xywh.cpu().reshape(4, ).numpy() for box in boxes]
         class_names = [names_dict[int(box.cls.cpu()[0])] for box in boxes]
-
-        for i in range(len(b_boxes)):
-            for j in range(i+1, len(b_boxes)):
-                iou = box_iou(box1=b_boxes[i], box2=b_boxes[j])
-                print(f'IOU {i} {j}: {iou}')
 
         ##
         new_obstacles = []
@@ -117,7 +112,7 @@ def simple_online_realtime_tracking(image_names: list[str], image_folder: str):
         stored_obstacles = new_obstacles
 
         out_image = draw_bounding_boxes(image=image,
-                                        boxes=[obstacle.box for obstacle in new_obstacles],
+                                        boxes=[convert_box_xywh_to_xyxy(obstacle.box) for obstacle in new_obstacles],
                                         names=[f'{obstacle.idx} (Age: {obstacle.age})'
                                                if obstacle.age > 50
                                                else f'{obstacle.idx}'
